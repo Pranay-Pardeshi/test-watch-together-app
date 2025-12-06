@@ -3,15 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchTogether - Pro Player Edition</title>
+    <title>WatchTogether - Ultimate Fixed v1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <!-- PLYR PLAYER (The Engine for Custom Controls) -->
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
-
     <style>
         body { font-family: 'Nunito', sans-serif; background-color: #0f172a; color: white; overflow: hidden; }
         
@@ -37,45 +33,45 @@
             transition: opacity 0.5s ease, transform 0.5s ease;
         }
         
-        /* --- CUSTOM PLAYER THEME (Plyr Overrides) --- */
-        :root { --plyr-color-main: #3b82f6; }
-        
-        .plyr {
-            height: 100%; width: 100%;
-            border-radius: 0;
-            font-family: 'Nunito', sans-serif;
+        /* --- DRAGGABLE INDIVIDUAL CAMS --- */
+        #camLayer {
+            position: fixed; inset: 0; z-index: 60; pointer-events: none; /* Let clicks pass through empty space */
         }
-        .plyr__control--overlaid { background: var(--plyr-color-main) !important; }
-        .plyr--video .plyr__controls .plyr__control.plyr__tab-focus, 
-        .plyr--video .plyr__controls .plyr__control:hover, 
-        .plyr--video .plyr__controls .plyr__control[aria-expanded=true] {
-            background: var(--plyr-color-main) !important;
-        }
-        
-        /* Separate Layers */
-        #camLayer { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
         
         .cam-card {
-            position: absolute; width: 140px; aspect-ratio: 16/9;
-            background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px);
-            border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4); cursor: grab;
-            pointer-events: auto; overflow: hidden;
+            position: absolute;
+            width: 140px; 
+            aspect-ratio: 16/9;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            cursor: grab;
+            pointer-events: auto; /* Enable clicking on the cam itself */
+            overflow: hidden;
             transition: border-color 0.2s, transform 0.1s;
         }
         .cam-card:active { cursor: grabbing; transform: scale(1.02); border-color: rgba(255,255,255,0.4); }
 
         /* --- CINEMA MODE --- */
         body.cinema-mode .ui-element { opacity: 0; pointer-events: none; }
+        body.cinema-mode .animated-bg, body.cinema-mode .blob { opacity: 0.1; }
         body.cinema-mode .cam-card { opacity: 0.3; transition: opacity 0.5s; }
         body.cinema-mode .cam-card:hover { opacity: 1; }
 
         /* --- GATE ANIMATION --- */
         #gateOverlay { pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100; display: none; }
         #gateOverlay.active { opacity: 1; pointer-events: auto; display: flex; }
-        .gate-door { position: absolute; top: 0; bottom: 0; width: 50%; background: #0f172a; transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); display: flex; align-items: center; overflow: visible; z-index: 101; }
+        
+        .gate-door {
+            position: absolute; top: 0; bottom: 0; width: 50%; background: #0f172a;
+            transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            display: flex; align-items: center; overflow: visible; z-index: 101;
+        }
         .gate-left { left: 0; justify-content: flex-end; transform: translateX(-100%); border-right: 2px solid rgba(255,255,255,0.1); }
         .gate-right { right: 0; justify-content: flex-start; transform: translateX(100%); border-left: 2px solid rgba(255,255,255,0.1); }
+        
         #gateOverlay.active .gate-left { transform: translateX(0); }
         #gateOverlay.active .gate-right { transform: translateX(0); }
         #gateOverlay.opening .gate-left { transform: translateX(-120%); }
@@ -89,10 +85,12 @@
             40%, 60% { transform: translate3d(8px, 0, 0); }
         }
 
-        /* --- REACTION FLOATERS --- */
+        /* --- FLOATING REACTIONS --- */
         .reaction-floater {
-            position: absolute; bottom: 20%; left: 50%; font-size: 3rem; pointer-events: none; z-index: 100;
-            animation: floatUp 2s forwards ease-out; text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: absolute; bottom: 20%; left: 50%; 
+            font-size: 3rem; pointer-events: none; z-index: 100;
+            animation: floatUp 2s forwards ease-out;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
         @keyframes floatUp {
             0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
@@ -108,14 +106,12 @@
         .theme-love .blob-2 { background: #f43f5e; }
         .theme-love .accent-text { color: #f472b6; }
         .theme-love .accent-bg { background-color: #db2777; }
-        .theme-love { --plyr-color-main: #db2777; }
 
         .theme-horror .blob-1 { background: #7f1d1d; }
         .theme-horror .blob-2 { background: #991b1b; }
         .theme-horror .accent-text { color: #ef4444; }
         .theme-horror .accent-bg { background-color: #b91c1c; }
         .theme-horror .animated-bg { background: linear-gradient(45deg, #0f0000, #2a0a0a, #000000); }
-        .theme-horror { --plyr-color-main: #b91c1c; }
 
         /* Utilities */
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -132,6 +128,7 @@
     <div class="blob blob-1 ui-element"></div>
     <div class="blob blob-2 ui-element"></div>
 
+    <!-- Reaction Container -->
     <div id="reactionZone" class="fixed inset-0 pointer-events-none z-[90] overflow-hidden"></div>
 
     <!-- GATE -->
@@ -144,7 +141,7 @@
     <div id="lobby" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="glass p-8 rounded-[3rem] w-full max-w-md text-center relative overflow-hidden">
             <h1 class="text-5xl font-black mb-2 tracking-tighter">Watch<span class="accent-text">Together</span></h1>
-            <p class="text-blue-200/80 font-bold mb-8">Pro Player Edition</p>
+            <p class="text-blue-200/80 font-bold mb-8">Ultimate Fixed Edition</p>
             
             <div id="configErr" class="hidden bg-red-500/20 border border-red-500/50 p-3 rounded-xl mb-4 text-xs text-left font-mono text-red-200">
                 ⚠️ CONFIG MISSING: Check Code Line 450
@@ -201,36 +198,32 @@
         </div>
 
         <!-- MAIN STAGE -->
-        <div class="flex-1 flex w-full h-full relative bg-black">
-            <!-- PLAYER CONTAINER -->
-            <div class="flex-1 relative overflow-hidden group flex items-center justify-center">
+        <div class="flex-1 flex w-full h-full relative">
+            <div class="flex-1 bg-black relative overflow-hidden group">
                 
-                <!-- 1. PLYR CONTAINER (YouTube & Direct Video) -->
-                <div id="plyrContainer" class="w-full h-full pointer-events-auto hidden-important">
-                    <!-- Target for Plyr -->
-                    <div id="player"></div> 
-                </div>
-
-                <!-- 2. GENERIC EMBED (Instagram / Snapchat) -->
-                <div id="embedContainer" class="w-full h-full pointer-events-auto hidden-important flex items-center justify-center bg-black">
+                <!-- PLAYERS -->
+                <!-- YouTube -->
+                <div id="ytPlayer" class="w-full h-full pointer-events-auto"></div>
+                <!-- Generic (IG/Snap) -->
+                <div id="embedContainer" class="hidden-important w-full h-full flex items-center justify-center bg-black">
                     <iframe id="genericPlayer" class="w-full h-full border-0" allow="autoplay; encrypted-media"></iframe>
                 </div>
-
-                <!-- 3. SCREEN SHARE -->
+                <!-- Screen Share -->
                 <video id="screenVideo" class="hidden w-full h-full object-contain bg-black" autoplay playsinline></video>
                 
                 <!-- PLACEHOLDER -->
                 <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-10 pointer-events-none ui-element transition-opacity duration-500">
                     <div class="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 border-2 border-white/10 animate-pulse">
-                        <i class="fas fa-play text-5xl text-white/20 ml-2"></i>
+                        <i class="fas fa-film text-5xl text-white/20"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-white/50">Custom Player Ready</h2>
-                    <p class="text-white/30 text-sm mt-2">Paste a YouTube link to start</p>
+                    <h2 class="text-2xl font-bold text-white/50">Ready to Watch?</h2>
+                    <p class="text-white/30 text-sm mt-2">Paste a YouTube, Instagram, or Snapchat link</p>
                 </div>
 
                 <!-- CONTROLS TRAY -->
                 <div id="ytControls" class="absolute bottom-32 left-0 w-full z-40 flex flex-col items-center justify-end pb-4 transition-all duration-300 opacity-0 hover:opacity-100 focus-within:opacity-100 ui-element pointer-events-auto">
                     
+                    <!-- REACTION BAR -->
                     <div class="flex gap-4 mb-2">
                         <button onclick="sendEmoji('😂')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">😂</button>
                         <button onclick="sendEmoji('❤️')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">❤️</button>
@@ -239,13 +232,17 @@
                         <button onclick="sendEmoji('🍿')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">🍿</button>
                     </div>
 
+                    <!-- Source Selector -->
                     <div class="flex gap-4 mb-3 p-2 bg-black/60 backdrop-blur rounded-full border border-white/10 shadow-xl">
                         <button onclick="setSource('yt')" class="source-icon active text-red-500 text-xl" title="YouTube"><i class="fab fa-youtube"></i></button>
                         <button onclick="setSource('ig')" class="source-icon text-pink-500 text-xl" title="Instagram"><i class="fab fa-instagram"></i></button>
                         <button onclick="setSource('snap')" class="source-icon text-yellow-400 text-xl" title="Snapchat"><i class="fab fa-snapchat-ghost"></i></button>
                     </div>
 
+                    <!-- Input Bar with Lock -->
                     <div class="glass p-2 rounded-full flex gap-2 shadow-2xl scale-95 hover:scale-100 transition-transform w-[500px] max-w-[90%] items-center">
+                        
+                        <!-- HOST LOCK TOGGLE -->
                         <button id="lockBtn" onclick="toggleControls()" class="hidden w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors" title="Lock/Unlock Controls">
                             <i id="lockIcon" class="fas fa-lock text-xs"></i>
                         </button>
@@ -257,6 +254,7 @@
 
                 <!-- INDIVIDUAL CAMS -->
                 <div id="camLayer">
+                    <!-- Me -->
                     <div id="myCamWrapper" class="cam-card" style="bottom: 20px; left: 20px;">
                         <video id="myVideo" class="w-full h-full object-cover transform -scale-x-100" autoplay muted playsinline></video>
                         <div class="absolute bottom-1 left-1 text-[8px] font-black bg-blue-600 px-1.5 py-0.5 rounded text-white accent-bg">YOU</div>
@@ -290,6 +288,7 @@
         import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
 
+        // 🚨 FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyDGgBZL5GkdDG9Hhb66HGNRTUfOjtt2xR0",
             authDomain: "watchparty-57597.firebaseapp.com",
@@ -302,7 +301,7 @@
         let app, db, auth, user, room;
         let mode = 'friends', myStream, screenStream;
         let peers = {};
-        let plyrPlayer, amISyncing = false; // New Player Instance
+        let ytPlayer, ytReady = false, amISyncing = false, playState = 'paused';
         let currentSource = 'yt';
         let isSharingScreen = false;
         let hostUid = null;
@@ -311,68 +310,45 @@
         const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
         async function boot() {
-            if (!firebaseConfig.apiKey) return document.getElementById('configErr').classList.remove('hidden');
+            if (!firebaseConfig.apiKey) {
+                document.getElementById('configErr').classList.remove('hidden');
+                return;
+            }
             try {
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 const cred = await signInAnonymously(auth);
                 user = cred.user;
-                document.getElementById('status').innerText = "Ready";
+                document.getElementById('status').innerText = "Connected & Ready";
                 document.getElementById('status').classList.add('text-green-400');
-            } catch(e) { console.error(e); }
-        }
-
-        // --- CUSTOM MEDIA PLAYER LOGIC ---
-        function initPlayer(type, source) {
-            // Cleanup existing
-            if(plyrPlayer) { plyrPlayer.destroy(); plyrPlayer = null; }
-            
-            document.getElementById('placeholder').classList.add('hidden-important');
-            const plyrContainer = document.getElementById('plyrContainer');
-            const embedContainer = document.getElementById('embedContainer');
-
-            if (type === 'yt') {
-                plyrContainer.classList.remove('hidden-important');
-                embedContainer.classList.add('hidden-important');
-                
-                // Init Plyr over Div
-                document.getElementById('player').innerHTML = `<div id="plyr-target" data-plyr-provider="youtube" data-plyr-embed-id="${source}"></div>`;
-                
-                plyrPlayer = new Plyr('#plyr-target', {
-                    controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
-                    settings: ['caption', 'quality', 'speed'],
-                    speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] }
-                });
-
-                // Attach Events for Sync
-                plyrPlayer.on('ready', () => {
-                    plyrPlayer.on('play', () => triggerUpdate('playing'));
-                    plyrPlayer.on('pause', () => triggerUpdate('paused'));
-                    plyrPlayer.on('seeked', () => triggerUpdate('seeked'));
-                });
-
-            } else {
-                // Fallback for IG/Snap (They block custom players)
-                plyrContainer.classList.add('hidden-important');
-                embedContainer.classList.remove('hidden-important');
-                document.getElementById('genericPlayer').src = source;
+            } catch(e) {
+                console.error(e);
+                let msg = "Connection Failed";
+                if (e.code === 'auth/requests-from-referer-blocked' || e.code === 'auth/unauthorized-domain') {
+                    msg = "⚠️ Domain Not Authorized";
+                    // Create a visible error box
+                    const errBox = document.createElement('div');
+                    errBox.className = "fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4";
+                    errBox.innerHTML = `
+                        <div class="bg-gray-900 border border-red-500 p-6 rounded-2xl max-w-lg text-center">
+                            <h2 class="text-xl font-bold text-red-500 mb-2">Firebase Security Error</h2>
+                            <p class="text-gray-300 text-sm mb-4">This domain is not authorized to use your Firebase Project.</p>
+                            <div class="bg-black/50 p-3 rounded text-xs font-mono text-blue-300 mb-4 break-all select-all">
+                                ${window.location.hostname}
+                            </div>
+                            <p class="text-gray-400 text-xs mb-4">
+                                Go to <a href="https://console.firebase.google.com/" target="_blank" class="text-white underline">Firebase Console</a> > Authentication > Settings > Authorized Domains<br>
+                                and add the domain above.
+                            </p>
+                            <button onclick="this.parentElement.parentElement.remove()" class="px-4 py-2 bg-red-600 rounded-lg text-white font-bold text-sm hover:bg-red-500">Close</button>
+                        </div>
+                    `;
+                    document.body.appendChild(errBox);
+                }
+                document.getElementById('status').innerText = msg;
+                document.getElementById('status').classList.add('text-red-500');
             }
-        }
-
-        function triggerUpdate(status) {
-            // Loop prevention & Host Control
-            if(amISyncing) return;
-            if(controlMode === 'host' && user.uid !== hostUid) return;
-
-            // Debounce high freq events
-            updateDoc(doc(db, "rooms", room), {
-                'state.status': status === 'playing' ? 'playing' : 'paused',
-                'state.time': plyrPlayer ? plyrPlayer.currentTime : 0,
-                'state.timestamp': serverTimestamp() // Force update
-            });
-            
-            if(status === 'paused') logSystem(`${document.getElementById('username').value} paused`);
         }
 
         // --- DRAG LOGIC ---
@@ -382,8 +358,11 @@
             if (!card || ['BUTTON', 'I', 'INPUT'].includes(e.target.tagName)) return;
             dragItem = card;
             const rect = card.getBoundingClientRect();
-            dragOffsetX = e.clientX - rect.left; dragOffsetY = e.clientY - rect.top;
-            card.style.cursor = 'grabbing'; card.style.zIndex = 100;
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            card.style.cursor = 'grabbing';
+            card.style.transition = 'none';
+            card.style.zIndex = 100;
         });
         document.addEventListener('mousemove', (e) => {
             if (!dragItem) return;
@@ -392,7 +371,11 @@
             dragItem.style.top = (e.clientY - dragOffsetY) + 'px';
         });
         document.addEventListener('mouseup', () => {
-            if (dragItem) { dragItem.style.cursor = 'grab'; dragItem.style.zIndex = ''; }
+            if (dragItem) {
+                dragItem.style.cursor = 'grab';
+                dragItem.style.transition = '';
+                dragItem.style.zIndex = '';
+            }
             dragItem = null;
         });
 
@@ -515,72 +498,106 @@
             });
         }
 
-        // --- SYNC ENGINE (PLYR EDITION) ---
+        // --- SYNC ENGINE (FIXED LOOP) ---
         function syncState(s) {
             controlMode = s.controlMode || 'host';
             updateControlUI();
 
+            const scr = document.getElementById('screenVideo');
+            const yt = document.getElementById('ytPlayer');
+            const gen = document.getElementById('embedContainer');
+            const ph = document.getElementById('placeholder');
+
             // Screen Share Priority
             if(s.sharer) {
-                document.getElementById('plyrContainer').classList.add('hidden-important');
-                document.getElementById('embedContainer').classList.add('hidden-important');
-                document.getElementById('placeholder').classList.add('hidden-important');
-                document.getElementById('screenVideo').classList.remove('hidden');
+                yt.classList.add('hidden-important');
+                gen.classList.add('hidden-important');
+                ph.classList.add('hidden-important');
+                scr.classList.remove('hidden');
                 
                 if(s.sharer !== user.uid) {
                     const el = document.getElementById(`v-${s.sharer}`);
-                    if(el && el.srcObject) document.getElementById('screenVideo').srcObject = el.srcObject;
+                    if(el && el.srcObject) scr.srcObject = el.srcObject;
                 } else if(screenStream) {
-                    document.getElementById('screenVideo').srcObject = screenStream;
+                    scr.srcObject = screenStream;
                 }
                 return;
             } else {
-                document.getElementById('screenVideo').classList.add('hidden');
+                scr.classList.add('hidden');
             }
 
-            // Media Sync
             if (s.type === 'yt') {
-                // Initialize if source changed
-                const currentId = plyrPlayer?.embed?.getVideoData ? plyrPlayer.embed.getVideoData().video_id : '';
-                if (!plyrPlayer || (s.url && currentId !== s.url)) {
-                    initPlayer('yt', s.url);
-                    return; // Player init will trigger ready later
-                }
-
-                if(plyrPlayer && plyrPlayer.ready) {
-                    const diff = Math.abs(plyrPlayer.currentTime - s.time);
+                gen.classList.add('hidden-important');
+                yt.classList.remove('hidden-important');
+                
+                if(ytReady && s.url) {
+                    ph.classList.add('hidden-important');
+                    
+                    // FIX: Safe check for video ID to prevent crash on empty player
+                    const currentData = ytPlayer.getVideoData();
+                    const currentId = currentData ? currentData.video_id : null;
+                    
+                    if(currentId !== s.url) {
+                        ytPlayer.loadVideoById(s.url);
+                    }
+                    
+                    const diff = Math.abs(ytPlayer.getCurrentTime() - (s.time || 0));
                     
                     if(s.status === 'playing') {
-                        if(plyrPlayer.paused) {
-                            amISyncing = true; plyrPlayer.play(); setTimeout(()=>amISyncing=false, 500);
+                        if(ytPlayer.getPlayerState() !== 1) {
+                            amISyncing = true;
+                            ytPlayer.playVideo();
+                            setTimeout(()=>amISyncing=false, 500);
                         }
-                        if(diff > 1.5) {
-                            amISyncing = true; plyrPlayer.currentTime = s.time; setTimeout(()=>amISyncing=false, 500);
+                        if(diff > 1.0) { // Tolerant sync to avoid jitter
+                            amISyncing = true;
+                            ytPlayer.seekTo(s.time || 0, true);
+                            setTimeout(()=>amISyncing=false, 500);
                         }
                     } else {
-                        if(plyrPlayer.playing) {
-                            amISyncing = true; plyrPlayer.pause(); setTimeout(()=>amISyncing=false, 500);
+                        if(ytPlayer.getPlayerState() !== 2) {
+                            amISyncing = true;
+                            ytPlayer.pauseVideo();
+                            setTimeout(()=>amISyncing=false, 500);
                         }
                     }
                 }
             } else {
-                initPlayer('generic', s.url);
+                yt.classList.add('hidden-important');
+                gen.classList.remove('hidden-important');
+                ph.classList.add('hidden-important');
+                document.getElementById('genericPlayer').src = s.url;
             }
+        }
+
+        // --- MEDIA HELPERS ---
+        function parseUrl(url) {
+            if (url.includes('instagram.com') && !url.includes('/embed')) {
+                let clean = url.split('?')[0];
+                if (clean.endsWith('/')) clean = clean.slice(0, -1);
+                return clean + '/embed';
+            }
+            return url;
         }
 
         window.loadMedia = async () => {
             if (controlMode === 'host' && user.uid !== hostUid) return alert("Host Locked!");
+            
             const raw = document.getElementById('ytUrl').value;
             let url = raw, type = 'generic';
 
-            if(currentSource === 'yt') {
-                const m = raw.match(/(?:v=|\/)([\w-]{11})/);
-                if(m) { url = m[1]; type = 'yt'; }
+            // Robust Youtube Detection
+            const ytMatch = raw.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/))([\w-]{11})/);
+            if(ytMatch) {
+                url = ytMatch[1];
+                type = 'yt';
             } else if(currentSource === 'ig') {
-                 if(raw.includes('instagram') && !raw.includes('/embed')) url = raw.split('?')[0] + '/embed';
+                 url = parseUrl(raw);
+                 type = 'generic';
             }
 
-            updateDoc(doc(db, "rooms", room), {'state.url': url, 'state.type': type, 'state.status': 'playing'});
+            // FIX: Added 'state.time': 0 to ensure video starts at beginning
+            updateDoc(doc(db, "rooms", room), {'state.url': url, 'state.type': type, 'state.status': 'playing', 'state.time': 0});
             logSystem(`${document.getElementById('username').value} loaded new media`);
         }
 
@@ -638,8 +655,8 @@
             document.getElementById('reactionZone').appendChild(el); setTimeout(()=>el.remove(), 2000);
         }
         window.sendTimestamp = async () => {
-            if(!plyrPlayer) return;
-            const t = Math.floor(plyrPlayer.currentTime);
+            if(!ytPlayer || !ytReady) return;
+            const t = Math.floor(ytPlayer.getCurrentTime());
             addDoc(collection(db, "rooms", room, "messages"), { txt: `📌 Time: ${Math.floor(t/60)}:${t%60<10?'0':''}${t%60}`, uid: user.uid, name: document.getElementById('username').value, ts: serverTimestamp() });
         }
         async function logSystem(txt) { addDoc(collection(db, "rooms", room, "messages"), { type: 'system', txt: txt, ts: serverTimestamp() }); }
@@ -677,6 +694,24 @@
                 } catch(e) {}
             }
         }
+
+        // Youtube API (WITH LOOP FIX)
+        const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; document.body.appendChild(tag);
+        window.onYouTubeIframeAPIReady = () => {
+            ytPlayer = new YT.Player('ytPlayer', { height:'100%', width:'100%', playerVars:{'autoplay':0,'controls':1,'rel':0}, events:{
+                'onReady': ()=>ytReady=true,
+                'onStateChange': (e) => {
+                    // Loop Prevention: Only update if I am NOT syncing myself
+                    if(amISyncing) return;
+                    // Host Lock Check
+                    if(controlMode === 'host' && user.uid !== hostUid) return;
+
+                    if(e.data===1 || e.data===2) {
+                        updateDoc(doc(db, "rooms", room), {'state.status':e.data===1?'playing':'paused', 'state.time':ytPlayer.getCurrentTime(), 'state.type': 'yt'});
+                    }
+                }
+            }});
+        };
 
         function createPixelHeartParts() {
             const color = mode === 'love' ? '#ec4899' : '#60a5fa'; 
