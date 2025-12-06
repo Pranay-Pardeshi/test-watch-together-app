@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WatchTogether - Ultimate v1 + Features</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Nunito', sans-serif; background-color: #0f172a; color: white; overflow: hidden; }
+        
+        /* --- ANIMATED BACKGROUND --- */
+        .animated-bg {
+            position: absolute; inset: 0; z-index: -1;
+            background: linear-gradient(45deg, #1a1a2e, #16213e, #2d1b36, #1a1a2e);
+            background-size: 400% 400%; animation: gradientBG 15s ease infinite;
+            transition: opacity 1s ease;
+        }
+        @keyframes gradientBG { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+        /* Floating Blobs */
+        .blob { position: absolute; filter: blur(60px); z-index: -1; opacity: 0.5; animation: float 10s infinite ease-in-out; transition: background 1s ease; }
+        .blob-1 { top: -10%; left: -10%; width: 50vh; height: 50vh; background: #7c3aed; border-radius: 50%; }
+        .blob-2 { bottom: -10%; right: -10%; width: 60vh; height: 60vh; background: #db2777; border-radius: 50%; animation-delay: -5s; }
+        @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(20px, -20px); } }
+
+        /* Glass UI */
+        .glass {
+            background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        /* --- INDIVIDUAL CAM CARDS (Separated) --- */
+        #camLayer {
+            position: fixed; inset: 0; z-index: 60; pointer-events: none; /* Let clicks pass through empty space */
+        }
+        
+        .cam-card {
+            position: absolute;
+            width: 140px; 
+            aspect-ratio: 16/9;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            cursor: grab;
+            pointer-events: auto; /* Enable clicking on the cam itself */
+            overflow: hidden;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+        .cam-card:active { cursor: grabbing; transform: scale(1.02); border-color: rgba(255,255,255,0.4); }
+
+        /* --- CINEMA MODE --- */
+        body.cinema-mode .ui-element { opacity: 0; pointer-events: none; }
+        body.cinema-mode .animated-bg, body.cinema-mode .blob { opacity: 0.1; }
+        body.cinema-mode .cam-card { opacity: 0.3; transition: opacity 0.5s; }
+        body.cinema-mode .cam-card:hover { opacity: 1; }
+
+        /* --- GATE ANIMATION --- */
+        #gateOverlay { pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100; display: none; }
+        #gateOverlay.active { opacity: 1; pointer-events: auto; display: flex; }
+        
+        .gate-door {
+            position: absolute; top: 0; bottom: 0; width: 50%; background: #0f172a;
+            transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            display: flex; align-items: center; overflow: visible; z-index: 101;
+        }
+        .gate-left { left: 0; justify-content: flex-end; transform: translateX(-100%); border-right: 2px solid rgba(255,255,255,0.1); }
+        .gate-right { right: 0; justify-content: flex-start; transform: translateX(100%); border-left: 2px solid rgba(255,255,255,0.1); }
+        
+        #gateOverlay.active .gate-left { transform: translateX(0); }
+        #gateOverlay.active .gate-right { transform: translateX(0); }
+        #gateOverlay.opening .gate-left { transform: translateX(-120%); }
+        #gateOverlay.opening .gate-right { transform: translateX(120%); }
+
+        .shake-it { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-8px, 0, 0); }
+            40%, 60% { transform: translate3d(8px, 0, 0); }
+        }
+
+        /* --- FLOATING REACTIONS --- */
+        .reaction-floater {
+            position: absolute; bottom: 20%; left: 50%; 
+            font-size: 3rem; pointer-events: none; z-index: 100;
+            animation: floatUp 2s forwards ease-out;
+            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+            10% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
+            100% { transform: translate(calc(-50% + var(--rnd-x)), -300px) scale(1); opacity: 0; }
+        }
+
+        /* --- THEMES --- */
+        .accent-text { color: #60a5fa; transition: color 0.5s; }
+        .accent-bg { background-color: #2563eb; transition: background-color 0.5s; }
+
+        .theme-love .blob-1 { background: #ec4899; }
+        .theme-love .blob-2 { background: #f43f5e; }
+        .theme-love .accent-text { color: #f472b6; }
+        .theme-love .accent-bg { background-color: #db2777; }
+
+        .theme-horror .blob-1 { background: #7f1d1d; }
+        .theme-horror .blob-2 { background: #991b1b; }
+        .theme-horror .accent-text { color: #ef4444; }
+        .theme-horror .accent-bg { background-color: #b91c1c; }
+        .theme-horror .animated-bg { background: linear-gradient(45deg, #0f0000, #2a0a0a, #000000); }
+
+        /* Utilities */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .hidden-important { display: none !important; }
+        .source-icon { filter: grayscale(1); opacity: 0.6; transition: all 0.2s; }
+        .source-icon.active { filter: grayscale(0); opacity: 1; transform: scale(1.1); }
+        .btn-bounce:hover { transform: translateY(-2px); }
+        .btn-bounce:active { transform: scale(0.95); }
+    </style>
+</head>
+<body>
+
+    <div class="animated-bg"></div>
+    <div class="blob blob-1 ui-element"></div>
+    <div class="blob blob-2 ui-element"></div>
+
+    <!-- NEW: Reaction Container -->
+    <div id="reactionZone" class="fixed inset-0 pointer-events-none z-[90] overflow-hidden"></div>
+
+    <!-- GATE -->
+    <div id="gateOverlay" class="fixed inset-0">
+        <div class="gate-door gate-left"><div id="gateIconLeft" class="mr-[-2px] relative z-10"></div></div>
+        <div class="gate-door gate-right"><div id="gateIconRight" class="ml-[-2px] relative z-10"></div></div>
+    </div>
+
+    <!-- LOBBY -->
+    <div id="lobby" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="glass p-8 rounded-[3rem] w-full max-w-md text-center relative overflow-hidden">
+            <h1 class="text-5xl font-black mb-2 tracking-tighter">Watch<span class="accent-text">Together</span></h1>
+            <p class="text-blue-200/80 font-bold mb-8">Ultimate + Features</p>
+            
+            <div id="configErr" class="hidden bg-red-500/20 border border-red-500/50 p-3 rounded-xl mb-4 text-xs text-left font-mono text-red-200">
+                ⚠️ CONFIG MISSING: Check Code Line 450
+            </div>
+
+            <div class="space-y-4">
+                <input id="username" type="text" placeholder="Choose a Nickname" class="w-full bg-black/20 border-2 border-white/10 rounded-2xl p-4 text-center font-bold text-white placeholder-white/30 focus:border-blue-400 outline-none transition-all">
+                
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setMode('friends')" id="btn-friends" class="glass p-3 rounded-xl border border-blue-500/50 bg-blue-500/10 hover:bg-blue-500/20 transition-all group flex flex-col items-center gap-1">
+                        <i class="fas fa-rocket text-2xl text-blue-400 group-hover:scale-110 transition-transform"></i>
+                        <span class="font-bold text-[10px] uppercase">Squad</span>
+                    </button>
+                    <button onclick="setMode('love')" id="btn-love" class="glass p-3 rounded-xl border border-pink-500/50 bg-pink-500/10 hover:bg-pink-500/20 transition-all group flex flex-col items-center gap-1">
+                        <i class="fas fa-heart text-2xl text-pink-400 group-hover:scale-110 transition-transform"></i>
+                        <span class="font-bold text-[10px] uppercase">Date</span>
+                    </button>
+                    <button onclick="setMode('horror')" id="btn-horror" class="glass p-3 rounded-xl border border-red-500/50 bg-red-500/10 hover:bg-red-500/20 transition-all group flex flex-col items-center gap-1">
+                        <i class="fas fa-ghost text-2xl text-red-500 group-hover:scale-110 transition-transform"></i>
+                        <span class="font-bold text-[10px] uppercase">Horror</span>
+                    </button>
+                </div>
+
+                <div class="pt-4 space-y-3">
+                    <button id="createBtn" onclick="createRoom()" class="w-full bg-blue-600 hover:bg-blue-500 p-4 rounded-2xl font-black text-lg shadow-lg btn-bounce accent-bg disabled:opacity-50 disabled:cursor-wait">
+                        ✨ Create Room
+                    </button>
+                    <div class="flex gap-2">
+                        <input id="roomInput" type="text" placeholder="Enter Room ID" class="flex-1 bg-black/20 border-2 border-white/10 rounded-2xl p-3 text-center font-mono text-sm uppercase focus:border-white/30 outline-none">
+                        <button id="joinBtn" onclick="joinRoom()" class="px-6 bg-white/10 hover:bg-white/20 rounded-2xl font-bold btn-bounce disabled:opacity-50">JOIN</button>
+                    </div>
+                </div>
+                <p id="status" class="text-xs font-mono text-white/40 h-4">Connecting to server...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app" class="hidden fixed inset-0 flex flex-col">
+        <!-- HEADER -->
+        <div id="appHeader" class="absolute top-0 left-0 w-full p-4 z-50 pointer-events-none ui-element transition-opacity duration-500">
+            <div class="glass max-w-4xl mx-auto h-16 rounded-full flex items-center justify-between px-6 pointer-events-auto shadow-2xl backdrop-blur-xl">
+                <div class="flex items-center gap-4">
+                    <span class="font-black text-xl tracking-tight hidden sm:inline">Watch<span class="accent-text">Together</span></span>
+                    <button onclick="copyID()" class="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full text-xs font-bold border border-white/10 transition-all">
+                        <span id="displayID">ID: ...</span> <i class="fas fa-copy ml-1"></i>
+                    </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="shareBtn" onclick="toggleScreenShare()" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/20 flex items-center justify-center transition-all text-white hover:text-blue-400" title="Share Screen"><i class="fas fa-desktop"></i></button>
+                    <button onclick="leave()" class="bg-red-500/80 hover:bg-red-500 text-white px-5 py-2 rounded-full text-xs font-black shadow-lg">EXIT</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN STAGE -->
+        <div class="flex-1 flex w-full h-full relative">
+            <div class="flex-1 bg-black relative overflow-hidden group">
+                
+                <!-- PLAYERS -->
+                <div id="ytPlayer" class="w-full h-full pointer-events-auto"></div>
+                <iframe id="genericPlayer" class="hidden w-full h-full border-0 pointer-events-auto" allow="autoplay; encrypted-media"></iframe>
+                <video id="screenVideo" class="hidden w-full h-full object-contain bg-black" autoplay playsinline></video>
+                
+                <!-- PLACEHOLDER -->
+                <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm z-10 pointer-events-none ui-element transition-opacity duration-500">
+                    <div class="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6 border-2 border-white/10 animate-pulse">
+                        <i class="fas fa-film text-5xl text-white/20"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white/50">Ready to Watch?</h2>
+                    <p class="text-white/30 text-sm mt-2">Paste a YouTube, Instagram, or Snapchat link</p>
+                </div>
+
+                <!-- CONTROLS TRAY -->
+                <div id="ytControls" class="absolute bottom-32 left-0 w-full z-40 flex flex-col items-center justify-end pb-4 transition-all duration-300 opacity-0 hover:opacity-100 focus-within:opacity-100 ui-element pointer-events-auto">
+                    
+                    <div class="flex gap-4 mb-2">
+                        <button onclick="sendEmoji('😂')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">😂</button>
+                        <button onclick="sendEmoji('❤️')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">❤️</button>
+                        <button onclick="sendEmoji('😱')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">😱</button>
+                        <button onclick="sendEmoji('🔥')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">🔥</button>
+                        <button onclick="sendEmoji('🍿')" class="text-2xl hover:scale-125 transition-transform btn-bounce drop-shadow-md">🍿</button>
+                    </div>
+
+                    <div class="flex gap-4 mb-3 p-2 bg-black/60 backdrop-blur rounded-full border border-white/10 shadow-xl">
+                        <button onclick="setSource('yt')" class="source-icon active text-red-500 text-xl" title="YouTube"><i class="fab fa-youtube"></i></button>
+                        <button onclick="setSource('ig')" class="source-icon text-pink-500 text-xl" title="Instagram"><i class="fab fa-instagram"></i></button>
+                        <button onclick="setSource('snap')" class="source-icon text-yellow-400 text-xl" title="Snapchat"><i class="fab fa-snapchat-ghost"></i></button>
+                        <button onclick="setSource('tik')" class="source-icon text-cyan-400 text-xl" title="TikTok"><i class="fab fa-tiktok"></i></button>
+                    </div>
+
+                    <div class="glass p-2 rounded-full flex gap-2 shadow-2xl scale-95 hover:scale-100 transition-transform w-[500px] max-w-[90%]">
+                        <input id="ytUrl" type="text" placeholder="Paste YouTube Link..." class="flex-1 bg-transparent border-none text-sm font-bold px-4 outline-none text-white placeholder-white/30">
+                        <button onclick="loadMedia()" class="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center shadow-lg accent-bg"><i class="fas fa-play text-xs"></i></button>
+                    </div>
+                </div>
+
+                <!-- INDIVIDUAL CAMS (Separated Layer) -->
+                <div id="camLayer">
+                    <!-- Me (Initial Position) -->
+                    <div id="myCamWrapper" class="cam-card" style="bottom: 20px; left: 20px;">
+                        <video id="myVideo" class="w-full h-full object-cover transform -scale-x-100" autoplay muted playsinline></video>
+                        <div class="absolute bottom-1 left-1 text-[8px] font-black bg-blue-600 px-1.5 py-0.5 rounded text-white accent-bg">YOU</div>
+                        <div class="absolute top-1 right-1 flex gap-1 z-10">
+                            <button onclick="toggleAudio()" id="btnAudio" class="w-5 h-5 rounded bg-black/50 hover:bg-white text-white hover:text-black flex items-center justify-center text-[10px] transition-colors"><i class="fas fa-microphone"></i></button>
+                            <button onclick="toggleVideo()" id="btnVideo" class="w-5 h-5 rounded bg-black/50 hover:bg-white text-white hover:text-black flex items-center justify-center text-[10px] transition-colors"><i class="fas fa-video"></i></button>
+                        </div>
+                    </div>
+                    <!-- Peers injected here as separate .cam-card divs -->
+                </div>
+            </div>
+
+            <!-- CHAT -->
+            <div id="chatBoxContainer" class="absolute right-4 bottom-36 w-80 h-80 glass rounded-3xl flex flex-col hidden md:flex border border-white/10 shadow-2xl z-40 transition-opacity duration-500 ui-element">
+                <div class="p-4 border-b border-white/5 flex justify-between items-center">
+                    <span class="font-bold text-xs tracking-wider text-white/70">LIVE CHAT</span>
+                    <span id="userCount" class="bg-green-500/20 text-green-400 text-[10px] px-2 py-1 rounded-full font-bold">1 Online</span>
+                </div>
+                <div id="chatBox" class="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar text-xs"></div>
+                
+                <button onclick="sendTimestamp()" class="mx-3 mt-1 py-1.5 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/40 font-mono transition-colors border border-white/5">📌 Bookmark Current Time</button>
+                
+                <form onsubmit="sendMsg(event)" class="p-3 border-t border-white/5 relative">
+                    <input id="chatIn" type="text" class="w-full bg-black/40 border border-white/10 rounded-full pl-4 pr-10 py-2.5 text-xs font-bold text-white focus:border-white/30 outline-none" placeholder="Say something...">
+                    <button type="submit" class="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 hover:text-blue-300 accent-text"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, addDoc, serverTimestamp, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        // 🚨 FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGgBZL5GkdDG9Hhb66HGNRTUfOjtt2xR0",
+            authDomain: "watchparty-57597.firebaseapp.com",
+            projectId: "watchparty-57597",
+            storageBucket: "watchparty-57597.firebasestorage.app",
+            messagingSenderId: "214088005820",
+            appId: "1:214088005820:web:8515c329f52afaab7a78b9"
+        };
+
+        let app, db, auth, user, room;
+        let mode = 'friends', myStream, screenStream;
+        let peers = {};
+        let ytPlayer, ytReady = false, amISyncing = false, playState = 'paused';
+        let currentSource = 'yt';
+        let isSharingScreen = false;
+        
+        const rtcConfig = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ] 
+        };
+
+        // --- BOOTSTRAP ---
+        async function boot() {
+            if (!firebaseConfig.apiKey) {
+                document.getElementById('configErr').classList.remove('hidden');
+                return;
+            }
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                const cred = await signInAnonymously(auth);
+                user = cred.user;
+                document.getElementById('status').innerText = "Connected & Ready";
+                document.getElementById('status').classList.add('text-green-400');
+            } catch(e) {
+                console.error(e);
+                document.getElementById('status').innerText = "Connection Failed";
+            }
+        }
+
+        // --- UI LOGIC (DRAGGABLE INDIVIDUAL CAMS) ---
+        // Global Drag Variables
+        let dragItem = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
+        document.addEventListener('mousedown', (e) => {
+            const card = e.target.closest('.cam-card');
+            // Allow dragging if clicking card, but NOT buttons/icons inside
+            if (!card || ['BUTTON', 'I', 'INPUT'].includes(e.target.tagName)) return;
+            
+            dragItem = card;
+            const rect = card.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            
+            card.style.cursor = 'grabbing';
+            card.style.transition = 'none'; // Disable transition for instant drag
+            card.style.zIndex = 100; // Bring to front
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!dragItem) return;
+            e.preventDefault();
+            
+            // Calculate new position relative to viewport
+            const newLeft = e.clientX - dragOffsetX;
+            const newTop = e.clientY - dragOffsetY;
+            
+            // Set style (NO BOUNDS as requested)
+            dragItem.style.left = newLeft + 'px';
+            dragItem.style.top = newTop + 'px';
+            
+            // Reset conflicting positioning props
+            dragItem.style.bottom = 'auto';
+            dragItem.style.right = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (dragItem) {
+                dragItem.style.cursor = 'grab';
+                dragItem.style.transition = ''; // Re-enable transition
+                dragItem.style.zIndex = '';
+            }
+            dragItem = null;
+        });
+
+        // Auto Hide Controls
+        let idleTimer;
+        function resetIdleTimer() {
+            document.body.classList.remove('cinema-mode');
+            clearTimeout(idleTimer);
+            if (playState === 'playing') {
+                idleTimer = setTimeout(() => document.body.classList.add('cinema-mode'), 3000);
+            }
+        }
+        ['mousemove','click','keydown'].forEach(e => window.addEventListener(e, resetIdleTimer));
+
+        // Source Selector
+        window.setSource = (src) => {
+            currentSource = src;
+            document.querySelectorAll('.source-icon').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            const input = document.getElementById('ytUrl');
+            const placeholders = {
+                'yt': "Paste YouTube Link...",
+                'ig': "Paste Instagram Post Link...",
+                'snap': "Paste Snapchat Embed Link...",
+                'tik': "Paste TikTok Video Link..."
+            };
+            input.placeholder = placeholders[src] || "Paste Link...";
+        }
+
+        // --- CORE ROOM LOGIC ---
+        window.setMode = (m) => {
+            mode = m;
+            document.body.classList.remove('theme-love', 'theme-horror'); 
+            if(m !== 'friends') document.body.classList.add(`theme-${m}`);
+        }
+
+        window.createRoom = async () => {
+            if(!user) return alert("Waiting for connection...");
+            const id = Math.random().toString(36).substring(2,8).toUpperCase();
+            try {
+                await setDoc(doc(db, "rooms", id), {
+                    created: serverTimestamp(),
+                    mode: mode,
+                    host: user.uid,
+                    state: { url: '', status: 'paused', time: 0, sharer: null, type: 'yt' }
+                });
+                join(id);
+            } catch(e) { alert("Error: " + e.message); }
+        }
+
+        window.joinRoom = async () => {
+            const id = document.getElementById('roomInput').value.trim().toUpperCase().replace("ID:","").trim();
+            if(!id) return alert("Enter ID");
+            const snap = await getDoc(doc(db, "rooms", id));
+            if(!snap.exists()) return alert("Room not found");
+            const rData = snap.data();
+            window.setMode(rData.mode || 'friends');
+            join(id);
+        }
+
+        async function join(id) {
+            createPixelHeartParts(); 
+            const overlay = document.getElementById('gateOverlay');
+            overlay.classList.add('active');
+            const leftI = document.getElementById('gateIconLeft');
+            const rightI = document.getElementById('gateIconRight');
+            
+            await new Promise(r => setTimeout(r, 800));
+            leftI.classList.add('shake-it');
+            rightI.classList.add('shake-it');
+            
+            await new Promise(r => setTimeout(r, 600)); 
+            
+            room = id;
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            document.getElementById('displayID').innerText = `ID: ${id}`;
+            
+            overlay.classList.add('opening');
+            setTimeout(() => {
+                overlay.classList.remove('active', 'opening');
+                leftI.classList.remove('shake-it');
+                rightI.classList.remove('shake-it');
+            }, 1500);
+
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+                document.getElementById('myVideo').srcObject = myStream;
+                document.getElementById('myVideo').muted = true; 
+            } catch(e) { console.warn("No Camera", e); }
+
+            const nick = document.getElementById('username').value || "Guest";
+            await setDoc(doc(db, "rooms", room, "users", user.uid), { name: nick, active: true });
+            window.addEventListener('beforeunload', () => deleteDoc(doc(db, "rooms", room, "users", user.uid)));
+            
+            listen();
+        }
+
+        // --- FIRESTORE LISTENERS ---
+        function listen() {
+            onSnapshot(collection(db, "rooms", room, "users"), snap => {
+                document.getElementById('userCount').innerText = `${snap.size} Online`;
+                snap.docChanges().forEach(c => {
+                    if(c.type === 'added' && c.doc.id !== user.uid && !peers[c.doc.id]) {
+                        if (user.uid < c.doc.id) connect(c.doc.id, true);
+                    }
+                    if(c.type === 'removed') {
+                        if(peers[c.doc.id]) { peers[c.doc.id].close(); delete peers[c.doc.id]; }
+                        const v = document.getElementById(`cam-${c.doc.id}`);
+                        if(v) v.remove();
+                    }
+                });
+            });
+
+            onSnapshot(collection(db, "rooms", room, "signals"), snap => {
+                snap.docChanges().forEach(c => {
+                    const d = c.doc.data();
+                    if(c.type === 'added') {
+                        if(d.type === 'emoji') showFloatingEmoji(d.val);
+                        else if(d.target === user.uid) handleSignal(d, c.doc.ref);
+                    }
+                });
+            });
+
+            onSnapshot(collection(db, "rooms", room, "messages"), snap => {
+                const box = document.getElementById('chatBox');
+                box.innerHTML = '';
+                const msgs = [];
+                snap.forEach(d => msgs.push(d.data()));
+                msgs.sort((a,b) => a.ts - b.ts);
+                msgs.forEach(m => {
+                    if(m.type === 'system') {
+                        box.innerHTML += `<div class="text-center my-2 text-[9px] text-white/40 italic font-mono border-t border-b border-white/5 py-1">✨ ${m.txt}</div>`;
+                    } else {
+                        const me = m.uid === user.uid;
+                        box.innerHTML += `<div class="flex flex-col ${me?'items-end':'items-start'}"><span class="text-[10px] text-white/50 px-2">${m.name}</span><div class="${me?'bg-blue-600':'bg-white/10'} px-3 py-1.5 rounded-2xl text-xs max-w-[85%] accent-bg">${m.txt}</div></div>`;
+                    }
+                });
+                box.scrollTop = 9999;
+            });
+
+            onSnapshot(doc(db, "rooms", room), snap => {
+                if(snap.exists()) syncState(snap.data().state);
+            });
+        }
+
+        // --- SYNC ENGINE ---
+        function syncState(s) {
+            const scr = document.getElementById('screenVideo');
+            const yt = document.getElementById('ytPlayer');
+            const gen = document.getElementById('genericPlayer');
+            const ph = document.getElementById('placeholder');
+            
+            if(s.sharer) {
+                yt.classList.add('hidden-important');
+                gen.classList.add('hidden-important');
+                ph.classList.add('hidden-important');
+                scr.classList.remove('hidden');
+                
+                if(s.sharer !== user.uid) {
+                    const el = document.getElementById(`v-${s.sharer}`);
+                    if(el && el.srcObject && scr.srcObject !== el.srcObject) {
+                        scr.srcObject = el.srcObject;
+                        scr.play().catch(e=>console.log("Autoplay blocked", e));
+                    }
+                } else if(screenStream) scr.srcObject = screenStream;
+                playState = 'playing';
+                resetIdleTimer();
+                return;
+            } else {
+                scr.classList.add('hidden');
+                scr.srcObject = null; 
+            }
+
+            if (s.type === 'yt') {
+                gen.classList.add('hidden-important');
+                yt.classList.remove('hidden-important');
+                
+                if(ytReady && s.url) {
+                    ph.classList.add('hidden-important');
+                    if(ytPlayer.getVideoData()['video_id'] !== s.url) ytPlayer.loadVideoById(s.url);
+                    const diff = Math.abs(ytPlayer.getCurrentTime() - s.time);
+                    playState = s.status;
+                    if(s.status === 'playing') {
+                        if(ytPlayer.getPlayerState() !== 1) ytPlayer.playVideo();
+                        if(diff > 0.5) ytPlayer.seekTo(s.time, true);
+                    } else {
+                        if(ytPlayer.getPlayerState() !== 2) ytPlayer.pauseVideo();
+                    }
+                }
+            } else {
+                yt.classList.add('hidden-important');
+                gen.classList.remove('hidden-important');
+                ph.classList.add('hidden-important');
+                if(gen.src !== s.url) gen.src = s.url;
+            }
+            resetIdleTimer();
+        }
+
+        // --- NEW FEATURES ---
+        window.sendEmoji = async (e) => {
+            await addDoc(collection(db, "rooms", room, "signals"), { type: 'emoji', val: e, ts: serverTimestamp() });
+        }
+        
+        function showFloatingEmoji(emoji) {
+            const el = document.createElement('div');
+            el.innerText = emoji;
+            el.className = 'reaction-floater';
+            el.style.setProperty('--rnd-x', (Math.random() * 100 - 50) + 'px'); 
+            document.getElementById('reactionZone').appendChild(el);
+            setTimeout(() => el.remove(), 2000);
+        }
+
+        window.sendTimestamp = async () => {
+            if(!ytReady || !ytPlayer) return;
+            const t = Math.floor(ytPlayer.getCurrentTime());
+            const min = Math.floor(t / 60);
+            const sec = t % 60;
+            const timeStr = `${min}:${sec < 10 ? '0'+sec : sec}`;
+            const msg = `📌 Bookmark: ${timeStr}`;
+            await addDoc(collection(db, "rooms", room, "messages"), { 
+                txt: msg, uid: user.uid, name: document.getElementById('username').value, ts: serverTimestamp() 
+            });
+        }
+
+        async function logSystem(txt) {
+            await addDoc(collection(db, "rooms", room, "messages"), { 
+                type: 'system', txt: txt, ts: serverTimestamp() 
+            });
+        }
+
+        // --- WEBRTC (Separated Logic) ---
+        function connect(uid, init) {
+            if(peers[uid]) return; 
+            const pc = new RTCPeerConnection(rtcConfig);
+            peers[uid] = pc;
+            pc.iceQueue = []; 
+
+            if(myStream) myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
+
+            pc.ontrack = e => {
+                // Ensure unique wrapper for each peer
+                let wrapper = document.getElementById(`cam-${uid}`);
+                if(!wrapper) {
+                    wrapper = document.createElement('div');
+                    wrapper.id = `cam-${uid}`;
+                    wrapper.className = "cam-card";
+                    // Random placement
+                    wrapper.style.left = Math.floor(Math.random() * (window.innerWidth - 200)) + "px";
+                    wrapper.style.top = Math.floor(Math.random() * (window.innerHeight - 200)) + "px";
+                    
+                    const v = document.createElement('video');
+                    v.id = `v-${uid}`; 
+                    v.className = "w-full h-full object-cover";
+                    v.autoplay = true; 
+                    v.playsInline = true;
+                    
+                    wrapper.appendChild(v); 
+                    document.getElementById('camLayer').appendChild(wrapper);
+                }
+                const v = document.getElementById(`v-${uid}`);
+                v.srcObject = e.streams[0];
+                v.onloadedmetadata = () => v.play().catch(console.error);
+            };
+
+            pc.onicecandidate = e => { if(e.candidate) sendSig({type:'ice', val:e.candidate.toJSON(), target:uid}); };
+            pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') pc.restartIce(); };
+
+            if(init) {
+                pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => sendSig({type:'offer', val:{type:pc.localDescription.type, sdp:pc.localDescription.sdp}, target:uid}));
+            }
+        }
+
+        async function handleSignal(sig, ref) {
+            if(!peers[sig.sender]) connect(sig.sender, false);
+            const pc = peers[sig.sender];
+            try {
+                if(sig.type === 'offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(sig.val));
+                    const a = await pc.createAnswer();
+                    await pc.setLocalDescription(a);
+                    sendSig({type:'answer', val:{type:a.type, sdp:a.sdp}, target:sig.sender});
+                    processIceQueue(pc);
+                } else if(sig.type === 'answer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(sig.val));
+                    processIceQueue(pc);
+                } else if(sig.type === 'ice') {
+                    pc.remoteDescription ? pc.addIceCandidate(new RTCIceCandidate(sig.val)).catch(e=>{}) : pc.iceQueue.push(sig.val);
+                }
+            } catch(e){ console.error("Signal Error", e); }
+            deleteDoc(ref);
+        }
+        
+        async function processIceQueue(pc) {
+            while(pc.iceQueue && pc.iceQueue.length) {
+                const c = pc.iceQueue.shift();
+                await pc.addIceCandidate(new RTCIceCandidate(c)).catch(e=>console.log("Queued Ice Error",e));
+            }
+        }
+        
+        async function sendSig(pl) { pl.sender=user.uid; await addDoc(collection(db, "rooms", room, "signals"), pl); }
+
+        // --- MEDIA HELPERS ---
+        function parseUrl(url, type) {
+            if (url.includes('instagram.com') && !url.includes('/embed')) {
+                let clean = url.split('?')[0];
+                if (clean.endsWith('/')) clean = clean.slice(0, -1);
+                return clean + '/embed';
+            }
+            return url;
+        }
+
+        window.loadMedia = async () => {
+            const raw = document.getElementById('ytUrl').value;
+            let url = raw, type = 'generic';
+
+            if(currentSource === 'yt') {
+                const m = raw.match(/(?:v=|\/)([\w-]{11})/);
+                if(m) { url = m[1]; type = 'yt'; }
+            } else if(currentSource === 'ig') {
+                 url = parseUrl(raw, 'ig');
+                 type = 'generic';
+            } else { type = 'generic'; }
+
+            updateDoc(doc(db, "rooms", room), {'state.url': url, 'state.type': type, 'state.status': 'playing'});
+            logSystem(`${document.getElementById('username').value} changed the video`);
+        }
+
+        window.sendMsg = async (e) => {
+            e.preventDefault();
+            const i = document.getElementById('chatIn');
+            if(i.value) addDoc(collection(db, "rooms", room, "messages"), {txt:i.value, uid:user.uid, name:document.getElementById('username').value, ts:serverTimestamp()});
+            i.value = '';
+        }
+        window.copyID = () => {
+            const t = document.createElement("textarea"); t.value = room; document.body.appendChild(t); t.select(); 
+            try { document.execCommand('copy'); } catch(e){} 
+            document.body.removeChild(t);
+            const el = document.getElementById('displayID'); el.innerText="COPIED!"; setTimeout(()=>el.innerText=`ID: ${room}`, 1500);
+        }
+        window.leave = () => location.reload();
+        
+        window.toggleAudio = () => { if(myStream) myStream.getAudioTracks()[0].enabled = !myStream.getAudioTracks()[0].enabled; };
+        window.toggleVideo = () => { if(myStream) myStream.getVideoTracks()[0].enabled = !myStream.getVideoTracks()[0].enabled; };
+        
+        window.toggleScreenShare = async () => {
+            const btn = document.getElementById('shareBtn');
+            if (isSharingScreen) {
+                updateDoc(doc(db, "rooms", room), {'state.sharer':null});
+                const camTrack = myStream ? myStream.getVideoTracks()[0] : null;
+                if(camTrack) {
+                    Object.values(peers).forEach(pc => {
+                        const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                        if(sender) sender.replaceTrack(camTrack);
+                    });
+                }
+                if(screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+                document.getElementById('screenVideo').classList.add('hidden');
+                btn.classList.remove('text-green-400');
+                isSharingScreen = false;
+            } else {
+                try {
+                    screenStream = await navigator.mediaDevices.getDisplayMedia({video:true});
+                    const screenTrack = screenStream.getVideoTracks()[0];
+                    document.getElementById('screenVideo').srcObject = screenStream;
+                    document.getElementById('screenVideo').classList.remove('hidden');
+                    updateDoc(doc(db, "rooms", room), {'state.sharer':user.uid});
+                    Object.values(peers).forEach(pc => {
+                        const sender = pc.getSenders().find(s => s.track.kind === 'video');
+                        if(sender) sender.replaceTrack(screenTrack);
+                    });
+                    screenTrack.onended = () => { if(isSharingScreen) window.toggleScreenShare(); };
+                    btn.classList.add('text-green-400');
+                    isSharingScreen = true;
+                } catch(e) { console.error("Share failed", e); }
+            }
+        }
+
+        // Youtube API
+        const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; document.body.appendChild(tag);
+        window.onYouTubeIframeAPIReady = () => {
+            ytPlayer = new YT.Player('ytPlayer', { height:'100%', width:'100%', playerVars:{'autoplay':0,'controls':1,'rel':0}, events:{
+                'onReady': ()=>ytReady=true,
+                'onStateChange': (e) => {
+                    if(!amISyncing && (e.data===1 || e.data===2)) {
+                        updateDoc(doc(db, "rooms", room), {'state.status':e.data===1?'playing':'paused', 'state.time':ytPlayer.getCurrentTime(), 'state.type': 'yt'});
+                        if(e.data===2) logSystem(`${document.getElementById('username').value} paused`);
+                    }
+                }
+            }});
+        };
+        
+        // Gate Icon Logic (Original v1)
+        function createPixelHeartParts() {
+            const color = mode === 'love' ? '#ec4899' : '#60a5fa'; 
+            const s = 10;
+            let leftHTML = '', rightHTML = '';
+            const heartMap = ["0011000","0111100","1111110","1111111","1111111","0111111","0011111","0001111","0000111","0000011"];
+            heartMap.forEach((row, r) => {
+                for(let c=0; c<7; c++) if(row[c] === '1') leftHTML += `<div style="position:absolute; width:${s}px; height:${s}px; background:${color}; top:${r*s}px; left:${c*s}px; box-shadow: 2px 2px 0 rgba(0,0,0,0.2);"></div>`;
+                for(let c=0; c<7; c++) if(row[6-c] === '1') rightHTML += `<div style="position:absolute; width:${s}px; height:${s}px; background:${color}; top:${r*s}px; left:${c*s}px; box-shadow: 2px 2px 0 rgba(0,0,0,0.2);"></div>`;
+            });
+            document.getElementById('gateIconLeft').innerHTML = `<div style="position:relative; width:70px; height:100px; transform: scale(4); transform-origin: top right;">${leftHTML}</div>`;
+            document.getElementById('gateIconRight').innerHTML = `<div style="position:relative; width:70px; height:100px; transform: scale(4); transform-origin: top left;">${rightHTML}</div>`;
+        }
+        createPixelHeartParts();
+
+        boot();
+    </script>
+</body>
+</html>
